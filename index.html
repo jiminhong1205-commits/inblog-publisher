@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>스펙트라 블로그 발행 도구</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f8f9fa; color: #1a1a1a; padding: 24px; }
+.wrap { max-width: 860px; margin: 0 auto; }
+h1 { font-size: 20px; font-weight: 600; margin-bottom: 4px; }
+.sub { font-size: 13px; color: #666; margin-bottom: 24px; }
+.box { background: white; border: 1px solid #e5e7eb; border-radius: 10px; padding: 20px; margin-bottom: 16px; }
+label { font-size: 13px; font-weight: 500; display: block; margin-bottom: 8px; }
+.row { display: flex; gap: 10px; }
+input[type=text], input[type=password] { flex: 1; padding: 10px 14px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; font-family: monospace; }
+input:focus { outline: none; border-color: #3b82f6; }
+.btn { padding: 10px 18px; border-radius: 8px; font-size: 13px; font-weight: 500; cursor: pointer; border: none; transition: all .15s; }
+.btn-blue { background: #1d4ed8; color: white; }
+.btn-blue:hover { background: #1e40af; }
+.btn-blue:disabled { background: #93c5fd; cursor: not-allowed; }
+.btn-green { background: #059669; color: white; }
+.btn-green:hover { background: #047857; }
+.btn-gray { background: white; color: #374151; border: 1px solid #d1d5db; }
+.btn-gray:hover { background: #f9fafb; }
+.btn-sm { padding: 6px 12px; font-size: 12px; }
+.key-status { font-size: 12px; margin-top: 8px; }
+.stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 16px; }
+.stat { background: white; border: 1px solid #e5e7eb; border-radius: 10px; padding: 14px; text-align: center; }
+.stat-n { font-size: 26px; font-weight: 600; }
+.stat-l { font-size: 12px; color: #6b7280; margin-top: 2px; }
+.n-total { color: #1d4ed8; } .n-ready { color: #059669; } .n-done { color: #6b7280; } .n-err { color: #dc2626; }
+.ctrl { display: flex; gap: 8px; margin-bottom: 14px; align-items: center; }
+.ctrl-r { margin-left: auto; display: flex; gap: 8px; }
+.progress { height: 4px; background: #e5e7eb; border-radius: 2px; margin-bottom: 14px; display: none; }
+.progress-fill { height: 100%; background: #1d4ed8; border-radius: 2px; transition: width .3s; }
+.posts { display: flex; flex-direction: column; gap: 8px; }
+.pc { background: white; border: 1px solid #e5e7eb; border-radius: 10px; padding: 14px 18px; display: flex; align-items: center; gap: 14px; }
+.pc.active { border-color: #3b82f6; background: #eff6ff; }
+.pc.done { opacity: .55; }
+.pc.fail { border-color: #dc2626; background: #fef2f2; }
+.icon { width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; flex-shrink: 0; }
+.ic-ok { background: #dcfce7; color: #059669; }
+.ic-wait { background: #fef3c7; color: #d97706; }
+.ic-done { background: #f3f4f6; color: #9ca3af; }
+.ic-run { background: #dbeafe; color: #3b82f6; }
+.ic-err { background: #fee2e2; color: #dc2626; }
+.pi { flex: 1; min-width: 0; }
+.pw { font-size: 11px; color: #6b7280; font-weight: 600; text-transform: uppercase; margin-bottom: 2px; }
+.pt { font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pd { font-size: 11px; color: #9ca3af; margin-top: 2px; }
+.badge { font-size: 10px; padding: 2px 7px; border-radius: 8px; font-weight: 500; display: inline-block; }
+.b-ok { background: #dcfce7; color: #059669; }
+.b-wait { background: #fef3c7; color: #d97706; }
+.log-box { background: #1e293b; border-radius: 10px; padding: 14px; margin-top: 16px; }
+.log-hd { font-size: 11px; color: #94a3b8; margin-bottom: 8px; font-weight: 600; text-transform: uppercase; }
+.log-body { font-family: monospace; font-size: 11px; color: #e2e8f0; max-height: 180px; overflow-y: auto; }
+.le { padding: 1px 0; }
+.lok { color: #4ade80; } .lerr { color: #f87171; } .linfo { color: #94a3b8; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>스펙트라 블로그 자동 발행</h1>
+  <p class="sub">4/30 ~ 6/10 · 총 13편 예약 발행 · 화/목 10:00 KST</p>
+
+  <div class="box">
+    <label>Inblog API Key (AI_WRITER_AGENT_KEY)</label>
+    <div class="row">
+      <input type="password" id="key" placeholder="키 입력" />
+      <button class="btn btn-gray" onclick="toggleKey()">보기</button>
+      <button class="btn btn-blue" id="vBtn" onclick="verify()">연결 확인</button>
+    </div>
+    <div class="key-status" id="ks"></div>
+  </div>
+
+  <div class="stats">
+    <div class="stat"><div class="stat-n n-total">13</div><div class="stat-l">전체</div></div>
+    <div class="stat"><div class="stat-n n-ready" id="sReady">1</div><div class="stat-l">준비 완료</div></div>
+    <div class="stat"><div class="stat-n n-done" id="sDone">0</div><div class="stat-l">발행 완료</div></div>
+    <div class="stat"><div class="stat-n n-err" id="sErr">0</div><div class="stat-l">오류</div></div>
+  </div>
+
+  <div class="ctrl">
+    <span style="font-size:12px;color:#9ca3af">본문 완성된 글만 발행 준비 상태입니다</span>
+    <div class="ctrl-r">
+      <button class="btn btn-gray" onclick="pubReady()">준비된 글 발행</button>
+      <button class="btn btn-green" onclick="pubAll()">전체 예약 등록</button>
+    </div>
+  </div>
+  <div class="progress" id="prog"><div class="progress-fill" id="progFill" style="width:0%"></div></div>
+  <div class="posts" id="postList"></div>
+
+  <div class="log-box">
+    <div class="log-hd">발행 로그</div>
+    <div class="log-body" id="logs"><div class="le linfo">대기 중...</div></div>
+  </div>
+</div>
+
+<script>
+const PROXY = '/api';
+
+const POSTS = [
+  {
+    id:'constAI', week:'4/5주 (04.30)', date:'2026-04-30T10:00:00+09:00',
+    title:'건설현장 안전 담당자가 같은 질문에 하루 종일 답하지 않아도 되는 이유',
+    slug:'construction-safety-ai-chatbot-automation',
+    desc:'현장 순회 대신 전화를 받고 있다면 — 반복 안전 문의를 AI가 처리하면 달라지는 것들',
+    metaTitle:'건설현장 안전 AI 챗봇 — 반복 문의 자동화로 담당자 업무가 바뀐다',
+    metaDesc:'건설현장 안전 AI 챗봇이 반복 문의를 자동화하고 담당자가 실질 안전관리에 집중하는 구조를 확인하세요.',
+    ready:true,
+    html:`<p>현장 순회를 나가야 하는데 전화가 또 옵니다. "안전모 착용 기준이 어떻게 되나요?" 어제도 답한 질문입니다. 건설현장 안전 AI 챗봇이 이 구조를 바꿀 수 있는 이유를 이 글에서 다룹니다.</p>
+<h2>건설현장 안전관리 담당자의 하루 — 같은 질문이 반복되는 구조</h2>
+<p>건설현장 안전관리 담당자는 하루에도 수십 건의 동일한 문의를 처리합니다. 신규 입사자가 들어올 때마다 안전모 착용 기준을 안내하고, 외국인 근로자에게는 작업 전 점검 항목을 다시 설명합니다. 화재 대피 절차를 묻는 전화는 야간 근무 중에도 옵니다.</p>
+<p>문제는 이 질문들이 모두 이미 정해진 답이 있다는 것입니다. 안전 수칙은 변하지 않고, 보호구 착용 기준도 동일하며, 위험 구역 출입 절차도 매뉴얼에 있습니다. 그럼에도 담당자는 매번 직접 답해야 합니다.</p>
+<p>종이로 배포된 안전교육 자료는 현장에서 분실되거나 오래된 버전이 돌아다닙니다. 현장 인원이 많을수록, 외국인 근로자 비율이 높을수록 이 반복은 더 심해집니다.</p>
+<p><strong>Q. 건설현장 안전관리 담당자가 매일 같은 질문에 반복 응대하는 문제를 어떻게 해결할 수 있나요?</strong><br>건설현장 안전 AI 챗봇은 반복성 높은 안전 수칙 문의를 24시간 자동으로 처리합니다. 담당자가 직접 응대하지 않아도 근로자가 필요한 정보를 즉시 얻을 수 있어, 담당자는 실질 안전관리 업무에 집중할 수 있습니다.</p>
+<h2>건설현장 안전 AI 챗봇이 처리하는 4가지</h2>
+<p>건설현장 안전 AI 챗봇은 반복성 높은 안전 문의를 자동으로 처리하는 24시간 응대 체계입니다.</p>
+<ol>
+<li><strong>안전 수칙 반복 문의 자동 응대</strong> — 작업 전 안전점검 항목, 보호구 착용 기준, 위험 구역 출입 절차 등 정형화된 질문을 24시간 즉시 처리합니다.</li>
+<li><strong>안전교육 자료 모바일 제공</strong> — 종이 배포 없이 근로자가 스마트폰으로 언제든 교육 자료와 매뉴얼에 접근할 수 있습니다.</li>
+<li><strong>비상 상황 초기 대응 안내</strong> — 화재, 낙하물, 사고 발생 시 초기 대응 절차를 즉시 안내합니다.</li>
+<li><strong>외국인 근로자 다국어 안전 안내</strong> — 한국어가 익숙하지 않은 외국인 근로자에게 모국어로 안전 수칙을 안내합니다.</li>
+</ol>
+<p><strong>Q. 건설현장 안전교육을 AI 챗봇으로 대체할 수 있나요?</strong><br>건설현장 안전 AI 챗봇은 교육을 대체하는 것이 아니라 보완합니다. 정형화된 안전 수칙 안내와 교육 자료 제공을 자동화하여 담당자가 교육의 질을 높이는 데 집중할 수 있는 환경을 만듭니다.</p>
+<h2>반복 응대가 계속될 때 생기는 구조적 문제</h2>
+<p>담당자가 반복 응대에 묶일수록 실질 안전관리는 공백이 됩니다.</p>
+<ol>
+<li><strong>실질 안전관리 공백</strong> — 담당자가 전화 응대에 시간을 쓰는 동안 현장 순회, 위험 요소 점검 업무가 지연됩니다.</li>
+<li><strong>야간·휴일 안전 공백</strong> — 담당자 근무시간 외 긴급 상황에 대응할 수단이 없습니다.</li>
+<li><strong>교육 이력 증빙 불가</strong> — 종이 기반 안전교육은 수료 이력 추적이 어려워 감사·사고 시 증빙이 불가능합니다.</li>
+</ol>
+<h2>건설현장 안전 AI 챗봇 도입 후 달라지는 것</h2>
+<p>건설현장 안전 AI 챗봇은 담당자의 업무 방식 자체를 바꿉니다.</p>
+<ol>
+<li><strong>담당자 업무 재편</strong> — 반복 응대에서 벗어나 현장 순회와 위험 요소 점검에 집중할 수 있습니다.</li>
+<li><strong>24시간 안전 안내 체계</strong> — 야간·휴일 포함 근로자가 언제든 필요한 안전 정보에 즉시 접근합니다.</li>
+<li><strong>교육 이력 디지털 기록화</strong> — 챗봇 대화 이력이 교육 수료 증빙 자료로 활용되어 감사 대응 범위가 확장됩니다.</li>
+</ol>
+<p>건설현장 안전 AI 챗봇은 안전관리 담당자를 반복 응대에서 해방시키고, 실질 안전관리에 집중할 수 있는 구조를 만듭니다. 영업 현장에서 비슷한 반복 업무 문제를 풀어낸 사례는 다음 글에서 다룹니다.</p>
+<hr><p>📌 이전글 보기: 금융사도, 제조사도, 건설현장도 — 외부 협업 문제를 카카오로 푸는 방식이 다른 이유<br>📌 다음글 보기: 영업사원 200명의 대화 이력을 관리하는 법 ◆ — S렌터카</p>`
+  },
+  { id:'sRent', week:'5/1주 (05.05)', date:'2026-05-05T10:00:00+09:00', title:'영업사원 200명의 대화 이력을 관리하는 법 ◆ — S렌터카', slug:'srental-200-sales-kakao-history', desc:'법인폰 200대를 지급해도 해결 안 됐던 문제, S렌터카가 선택한 방식', metaTitle:'S렌터카 영업사원 카카오 이력관리 사례', metaDesc:'영업사원 200명의 카카오 대화 이력을 조직 자산으로 관리하는 S렌터카 전환 사례를 확인하세요.', ready:false, html:'<p>본문 작성 예정</p>' },
+  { id:'global', week:'5/1주 (05.07)', date:'2026-05-07T10:00:00+09:00', title:'글로벌 파트너와 카카오로 소통하는 법 ◆ — H해운사·J캐피탈', slug:'global-partner-kakao-hshipping-jcapital', desc:'20개국 언어, 10개 채널 — 해운·캐피탈이 외국 파트너를 카카오로 연결한 방식', metaTitle:'글로벌 파트너 카카오 소통 — H해운사·J캐피탈 사례', metaDesc:'H해운사·J캐피탈이 글로벌 파트너와 카카오 기반 다국어 외부 협업을 구축한 방식을 확인하세요.', ready:false, html:'<p>본문 작성 예정</p>' },
+  { id:'gWire', week:'5/2주 (05.12)', date:'2026-05-12T10:00:00+09:00', title:'거래처가 개인 카카오를 쓰는 문제, G전선은 이렇게 풀었다 ◆', slug:'gwire-partner-kakao-solution', desc:'제조업 거래처 소통이 개인 폰 밖으로 나온 순간 조직에서 달라진 것들', metaTitle:'G전선 제조업 거래처 카카오 공식화 사례', metaDesc:'G전선이 제조·물류 거래처 개인 카카오 문제를 공식 채널로 전환한 방법을 확인하세요.', ready:false, html:'<p>본문 작성 예정</p>' },
+  { id:'webkashi', week:'5/2주 (05.14)', date:'2026-05-14T10:00:00+09:00', title:'콜센터 전화가 절반으로 줄었습니다 — 웹케시 rERP AI 챗봇 도입기 ◆', slug:'webcash-rerp-noa-ai-chatbot-case', desc:'하루 50~60콜을 처리하던 상담팀, NOA AI 챗봇 도입 후 달라진 것', metaTitle:'웹케시 rERP NOA AI 챗봇 콜 감소 사례', metaDesc:'웹케시 rERP가 NOA AI 챗봇으로 콜센터 전화를 절반으로 줄인 구조와 운영 효과를 확인하세요.', ready:false, html:'<p>본문 작성 예정</p>' },
+  { id:'finHub', week:'5/3주 (05.19)', date:'2026-05-19T10:00:00+09:00', title:'금융권이 카카오를 공식 업무 채널로 선택하는 이유 ★', slug:'why-finance-chooses-kakao-official', desc:'금융 케이스 5개가 말하는 공통점 — 카카오를 선택하는 구조적 이유', metaTitle:'금융권 카카오 공식 업무채널 선택 이유', metaDesc:'금융사가 카카오를 공식 업무 채널로 선택하는 보안·컴플라이언스·접근성 구조적 이유를 확인하세요.', ready:false, html:'<p>본문 작성 예정</p>' },
+  { id:'colabVs', week:'5/3주 (05.21)', date:'2026-05-21T10:00:00+09:00', title:'고객센터 상담과 거래처 소통, 카카오를 같은 방식으로 쓰면 안 되는 이유', slug:'cs-vs-partner-kakao-different', desc:'CS 채널과 외부 협업 채널을 같은 구조로 운영하면 반드시 생기는 문제', metaTitle:'고객센터 vs 거래처 소통 카카오 채널 구조 차이', metaDesc:'고객센터 상담과 거래처 외부 협업이 별도 구조로 설계되어야 하는 이유를 비교 분석합니다.', ready:false, html:'<p>본문 작성 예정</p>' },
+  { id:'noa2', week:'5/4주 (05.26)', date:'2026-05-26T10:00:00+09:00', title:'NOA② 대화 이력 데이터에서 경영진이 보는 것 — AI 인사이트 리포트', slug:'noa2-clevel-conversation-insight', desc:'대화 데이터를 경영 판단 지표로 전환하는 방법', metaTitle:'NOA② C-Level 대화 데이터 경영 인사이트', metaDesc:'C-Level이 상담 대화 데이터에서 경영 인사이트를 도출하는 NOA AI 분석 구조를 확인하세요.', ready:false, html:'<p>본문 작성 예정</p>' },
+  { id:'aftOp', week:'5/4주 (05.28)', date:'2026-05-28T10:00:00+09:00', title:'Cowork+ 도입 후 운영 고도화 — 다음 단계는?', slug:'coworkplus-operation-next-level', desc:'도입 이후가 더 중요합니다 — 장기 사용자를 위한 운영 고도화', metaTitle:'Cowork+ 도입 후 운영 고도화 가이드', metaDesc:'Cowork+ 도입 후 채널 운영 효율과 AI 고도화 방향을 단계별로 확인하세요.', ready:false, html:'<p>본문 작성 예정</p>' },
+  { id:'noa3', week:'6/1주 (06.01)', date:'2026-06-01T10:00:00+09:00', title:'NOA③ AI QA — 상담사 100명의 대화를 AI가 혼자 듣는 방법', slug:'noa3-ai-qa-quality-management', desc:'전수 모니터링이 불가능한 상담 품질 관리, AI QA가 바꾸는 것', metaTitle:'NOA③ AI QA 상담 품질 전수 관리', metaDesc:'NOA AI QA로 상담사 100명의 대화를 전수 분석하고 품질을 관리하는 구조를 확인하세요.', ready:false, html:'<p>본문 작성 예정</p>' },
+  { id:'dataAsset', week:'6/1주 (06.03)', date:'2026-06-03T10:00:00+09:00', title:'거래처와 나눈 카카오 대화, 회사 자산으로 만드는 방법', slug:'partner-kakao-data-asset', desc:'매일 오가는 거래처 카카오 대화가 조직 자산이 되려면 무엇이 달라져야 하는가', metaTitle:'거래처 카카오 대화 회사 자산화 방법', metaDesc:'거래처 카카오 대화 이력을 조직 데이터 자산으로 전환하는 구조와 활용 방법을 확인하세요.', ready:false, html:'<p>본문 작성 예정</p>' },
+  { id:'finChk', week:'6/2주 (06.08)', date:'2026-06-08T10:00:00+09:00', title:'Cowork+ 도입 전 최종 체크리스트 — 우리 조직에 맞는지 확인하는 법', slug:'coworkplus-final-adoption-checklist', desc:'도입 결정 전 반드시 확인해야 할 보안·운영·연동 체크리스트', metaTitle:'Cowork+ 도입 전 최종 체크리스트', metaDesc:'Cowork+ 도입 전 보안·운영·연동 요건을 점검하는 최종 체크리스트를 확인하세요.', ready:false, html:'<p>본문 작성 예정</p>' },
+  { id:'prodFin', week:'6/2주 (06.10)', date:'2026-06-10T10:00:00+09:00', title:'[제품 이야기] Cowork+ × NOA — 대화가 비즈니스 자산이 되는 구조', slug:'coworkplus-noa-product-story', desc:'금융·제조·물류 기업이 외부 협업과 AI 인사이트를 동시에 갖추는 방법', metaTitle:'Cowork+ × NOA 시너지 — 대화 비즈니스 자산화', metaDesc:'Cowork+와 NOA의 결합으로 대화가 비즈니스 자산이 되는 구조와 적용 방법을 확인하세요.', ready:false, html:'<p>본문 작성 예정</p>' }
+];
+
+const done = {}, failed = {};
+
+function getKey() { return document.getElementById('key').value.trim(); }
+function toggleKey() { const i = document.getElementById('key'); i.type = i.type === 'password' ? 'text' : 'password'; }
+
+function addLog(msg, type='linfo') {
+  const el = document.getElementById('logs');
+  const d = document.createElement('div');
+  d.className = `le ${type}`;
+  d.textContent = `[${new Date().toLocaleTimeString('ko-KR')}] ${msg}`;
+  el.appendChild(d);
+  el.scrollTop = el.scrollHeight;
+}
+
+function updateStats() {
+  document.getElementById('sDone').textContent = Object.keys(done).length;
+  document.getElementById('sErr').textContent = Object.keys(failed).length;
+}
+
+async function verify() {
+  const k = getKey();
+  if (!k) { addLog('API Key를 입력하세요', 'lerr'); return; }
+  const btn = document.getElementById('vBtn');
+  btn.disabled = true; btn.textContent = '확인 중...';
+  try {
+    const r = await fetch(`${PROXY}/me`, { headers: { Authorization: `Bearer ${k}` } });
+    if (r.ok) {
+      document.getElementById('ks').innerHTML = '<span style="color:#059669">✅ 연결 성공</span>';
+      addLog('API 연결 확인 완료', 'lok');
+    } else {
+      document.getElementById('ks').innerHTML = '<span style="color:#dc2626">❌ 인증 실패 — 키를 확인하세요</span>';
+      addLog(`인증 실패: ${r.status}`, 'lerr');
+    }
+  } catch(e) {
+    document.getElementById('ks').innerHTML = '<span style="color:#dc2626">❌ 연결 오류</span>';
+    addLog(`연결 오류: ${e.message}`, 'lerr');
+  }
+  btn.disabled = false; btn.textContent = '연결 확인';
+}
+
+async function publishOne(p) {
+  const k = getKey();
+  if (!k) { addLog('API Key 없음', 'lerr'); return; }
+  const card = document.getElementById(`c-${p.id}`);
+  card.className = 'pc active';
+  setIcon(p.id, 'ic-run', '...');
+  addLog(`발행 시작: ${p.title.slice(0,30)}...`);
+  try {
+    const r1 = await fetch(`${PROXY}/posts`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${k}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ jsonapi:{version:'1.0'}, data:{ type:'posts', attributes:{
+        title:p.title, slug:p.slug, description:p.desc,
+        content_html:p.html, published:false,
+        meta_title:p.metaTitle, meta_description:p.metaDesc,
+        canonical_url:'', cta_text:''
+      }}})
+    });
+    if (r1.status !== 201) {
+      const t = await r1.text();
+      throw new Error(`생성 실패 ${r1.status}: ${t.slice(0,80)}`);
+    }
+    const j1 = await r1.json();
+    const pid = j1.data.id;
+    addLog(`생성 완료 (ID: ${pid})`);
+
+    const r2 = await fetch(`${PROXY}/posts/${pid}/publish`, {
+      method: 'PATCH',
+      headers: { Authorization: `Bearer ${k}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ data:{ attributes:{ published_at: p.date }}})
+    });
+    if (r2.status !== 200 && r2.status !== 201) {
+      const t = await r2.text();
+      throw new Error(`예약 실패 ${r2.status}: ${t.slice(0,80)}`);
+    }
+    addLog(`✅ ${p.date.slice(0,10)} 예약 완료`, 'lok');
+    card.className = 'pc done';
+    setIcon(p.id, 'ic-done', '✓');
+    done[p.id] = true;
+    delete failed[p.id];
+  } catch(e) {
+    addLog(`오류: ${e.message}`, 'lerr');
+    card.className = 'pc fail';
+    setIcon(p.id, 'ic-err', '✕');
+    failed[p.id] = true;
+    delete done[p.id];
+  }
+  updateStats();
+}
+
+function setIcon(id, cls, txt) {
+  const el = document.getElementById(`i-${id}`);
+  el.className = `icon ${cls}`;
+  el.textContent = txt;
+}
+
+async function pubReady() {
+  const list = POSTS.filter(p => p.ready && !done[p.id]);
+  if (!list.length) { addLog('발행할 준비된 글이 없습니다'); return; }
+  showProgress();
+  for (let i = 0; i < list.length; i++) {
+    setProgress((i / list.length) * 100);
+    await publishOne(list[i]);
+    await sleep(700);
+  }
+  setProgress(100);
+  addLog('완료', 'lok');
+}
+
+async function pubAll() {
+  const list = POSTS.filter(p => !done[p.id]);
+  showProgress();
+  for (let i = 0; i < list.length; i++) {
+    setProgress((i / list.length) * 100);
+    await publishOne(list[i]);
+    await sleep(700);
+  }
+  setProgress(100);
+  addLog('전체 처리 완료', 'lok');
+}
+
+function showProgress() { document.getElementById('prog').style.display = 'block'; }
+function setProgress(v) { document.getElementById('progFill').style.width = v + '%'; }
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+function render() {
+  const list = document.getElementById('postList');
+  list.innerHTML = '';
+  const readyCount = POSTS.filter(p => p.ready).length;
+  document.getElementById('sReady').textContent = readyCount;
+
+  POSTS.forEach(p => {
+    const d = new Date(p.date);
+    const days = ['일','월','화','수','목','금','토'];
+    const dateStr = `${d.getMonth()+1}/${d.getDate()} ${days[d.getDay()]}요일`;
+    const card = document.createElement('div');
+    card.className = 'pc';
+    card.id = `c-${p.id}`;
+    card.innerHTML = `
+      <div class="icon ${p.ready ? 'ic-ok' : 'ic-wait'}" id="i-${p.id}">${p.ready ? '✓' : '○'}</div>
+      <div class="pi">
+        <div class="pw">${p.week}</div>
+        <div class="pt">${p.title}</div>
+        <div class="pd">${dateStr} 10:00 · <span class="badge ${p.ready ? 'b-ok' : 'b-wait'}">${p.ready ? '본문 완성' : '작성 중'}</span></div>
+      </div>
+      <button class="btn btn-gray btn-sm" onclick="publishOne(POSTS[${POSTS.indexOf(p)}])">발행</button>`;
+    list.appendChild(card);
+  });
+}
+render();
+</script>
+</body>
+</html>
