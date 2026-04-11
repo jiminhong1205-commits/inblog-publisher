@@ -180,8 +180,8 @@ async function verify() {
   const btn = document.getElementById('vBtn');
   btn.disabled = true; btn.textContent = '확인 중...';
   try {
-    const r = await fetch(`${PROXY}/me`, { headers: { Authorization: `Bearer ${k}` } });
-    if (r.ok) {
+    const r = await fetch(`${PROXY}/posts?page=1&limit=1`, { headers: { Authorization: `Bearer ${k}` } });
+    if (r.ok || r.status === 200) {
       document.getElementById('ks').innerHTML = '<span style="color:#059669">✅ 연결 성공</span>';
       addLog('API 연결 확인 완료', 'lok');
     } else {
