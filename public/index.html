@@ -215,9 +215,10 @@ async function publishOne(p) {
       headers: authHeaders(k),
       body: JSON.stringify({ jsonapi:{version:'1.0'}, data:{ type:'posts', attributes:{
         title:p.title, slug:p.slug, description:p.desc,
-        content_html:p.html, published:false,
-        meta_title:p.metaTitle, meta_description:p.metaDesc,
-        canonical_url:'', cta_text:''
+       content_html:p.html, published:false,
+published_at:p.date,
+meta_title:p.metaTitle, meta_description:p.metaDesc,
+canonical_url:'', cta_text:''
       }}})
     });
 let pid;
