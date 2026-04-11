@@ -24,8 +24,10 @@ export default async function handler(req, res) {
     });
 
     const text = await response.text();
-    const data = text ? JSON.parse(text) : {};
-    res.status(response.status).json(data);
+let data;
+try { data = text ? JSON.parse(text) : {}; } 
+catch { data = { raw: text }; }
+res.status(response.status).json(data);
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
