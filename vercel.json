@@ -1,4 +1,7 @@
-function apiUrl(path, query) {
-  const qs = query ? '?' + new URLSearchParams(query).toString() : '';
-  return `https://inblog.ai/api/v1/${path}${qs}`;
+{
+  "version": 2,
+  "routes": [
+    { "src": "/api/(.*)", "dest": "/api/$1" },
+    { "src": "/(.*)", "dest": "/public/$1" }
+  ]
 }
