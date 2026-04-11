@@ -243,7 +243,7 @@ if (r1.status === 201) {
     const r2 = await fetch(apiUrl(`posts/${pid}/publish`), {
       method: 'PATCH',
       headers: authHeaders(k),
-      body: JSON.stringify({ published_at: p.date })
+      body: JSON.stringify({})
     });
     if (r2.status !== 200 && r2.status !== 201) {
       const t = await r2.text();
