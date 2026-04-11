@@ -6,7 +6,7 @@ export default async function handler(req, res) {
 
   const { path } = req.query;
   const apiPath = Array.isArray(path) ? path.join('/') : path || '';
-  const url = `https://inblog.ai/api/v1/${apiPath}`;
+  const url = `https://api.inblog.ai/api/v1/${apiPath}`;
 
   try {
     const response = await fetch(url, {
