@@ -1,3 +1,4 @@
-{
-  "version": 2
+function apiUrl(path, query) {
+  const qs = query ? '?' + new URLSearchParams(query).toString() : '';
+  return `https://inblog.ai/api/v1/${path}${qs}`;
 }
