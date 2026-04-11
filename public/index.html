@@ -220,12 +220,23 @@ async function publishOne(p) {
         canonical_url:'', cta_text:''
       }}})
     });
-    if (r1.status !== 201) {
-      const t = await r1.text();
-      throw new Error(`생성 실패 ${r1.status}: ${t.slice(0,120)}`);
-    }
-    const j1 = await r1.json();
-    const pid = j1.data.id;
+let pid;
+if (r1.status === 201) {
+  const j1 = await r1.json();
+  pid = j1.data.id;
+} else if (r1.status === 409) {
+  // 이미 존재하는 draft → 목록에서 ID 찾기
+  addLog('slug 중복 — 기존 draft에서 ID 검색 중...');
+  const rList = await fetch(apiUrl('posts', { page:1, limit:50 }), { headers: authHeaders(k) });
+  const jList = await rList.json();
+  const existing = jList.data && jList.data.find(post => post.attributes.slug === p.slug);
+  if (!existing) throw new Error('기존 draft를 찾을 수 없습니다');
+  pid = existing.id;
+  addLog(`기존 draft 발견 (ID: ${pid})`);
+} else {
+  const t = await r1.text();
+  throw new Error(`생성 실패 ${r1.status}: ${t.slice(0,120)}`);
+}
     addLog(`생성 완료 (ID: ${pid})`);
 
     const r2 = await fetch(apiUrl(`posts/${pid}/publish`), {
