@@ -523,7 +523,7 @@ const POSTS = [
 ];
 
 const done={}, failed={};
-function getKey(){return document.getElementById('key').value.trim();}
+function getKey(){   return document.getElementById('key').value     .trim()     .replace(/[^\x20-\x7E]/g, ''); }
 function toggleKey(){const i=document.getElementById('key');i.type=i.type==='password'?'text':'password';}
 function addLog(msg,type='linfo'){const el=document.getElementById('logs');const d=document.createElement('div');d.className=`le ${type}`;d.textContent=`[${new Date().toLocaleTimeString('ko-KR')}] ${msg}`;el.appendChild(d);el.scrollTop=el.scrollHeight;}
 function updateStats(){document.getElementById('sDone').textContent=Object.keys(done).length;document.getElementById('sErr').textContent=Object.keys(failed).length;}
