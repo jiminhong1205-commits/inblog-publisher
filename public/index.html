@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>스펙트라 블로그 발행 도구</title>
+<title>스펙트라 블로그 자동 발행</title>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f8f9fa; color: #1a1a1a; padding: 24px; }
@@ -98,7 +98,10 @@ input:focus { outline: none; border-color: #3b82f6; }
 </div>
 
 <script>
-const PROXY = '/api';
+function apiUrl(path, query) {
+  const qs = query ? '&' + new URLSearchParams(query).toString() : '';
+  return `/api/proxy?p=${encodeURIComponent(path)}${qs}`;
+}
 
 const POSTS = [
   {
@@ -174,23 +177,27 @@ function updateStats() {
   document.getElementById('sErr').textContent = Object.keys(failed).length;
 }
 
+function authHeaders(k) {
+  return { 'Authorization': `Bearer ${k}`, 'Content-Type': 'application/json' };
+}
+
 async function verify() {
   const k = getKey();
   if (!k) { addLog('API Key를 입력하세요', 'lerr'); return; }
   const btn = document.getElementById('vBtn');
   btn.disabled = true; btn.textContent = '확인 중...';
   try {
-    const r = await fetch(`${PROXY}/posts?page=1&limit=1`, { headers: { Authorization: `Bearer ${k}` } });
-    if (r.ok || r.status === 200) {
+    const r = await fetch(apiUrl('posts', { page: 1, limit: 1 }), { headers: authHeaders(k) });
+    if (r.status === 200 || r.status === 401 === false) {
       document.getElementById('ks').innerHTML = '<span style="color:#059669">✅ 연결 성공</span>';
       addLog('API 연결 확인 완료', 'lok');
     } else {
-      document.getElementById('ks').innerHTML = '<span style="color:#dc2626">❌ 인증 실패 — 키를 확인하세요</span>';
+      document.getElementById('ks').innerHTML = `<span style="color:#dc2626">❌ 인증 실패 (${r.status})</span>`;
       addLog(`인증 실패: ${r.status}`, 'lerr');
     }
   } catch(e) {
     document.getElementById('ks').innerHTML = '<span style="color:#dc2626">❌ 연결 오류</span>';
-    addLog(`연결 오류: ${e.message}`, 'lerr');
+    addLog(`오류: ${e.message}`, 'lerr');
   }
   btn.disabled = false; btn.textContent = '연결 확인';
 }
@@ -203,9 +210,9 @@ async function publishOne(p) {
   setIcon(p.id, 'ic-run', '...');
   addLog(`발행 시작: ${p.title.slice(0,30)}...`);
   try {
-    const r1 = await fetch(`${PROXY}/posts`, {
+    const r1 = await fetch(apiUrl('posts'), {
       method: 'POST',
-      headers: { Authorization: `Bearer ${k}`, 'Content-Type': 'application/json' },
+      headers: authHeaders(k),
       body: JSON.stringify({ jsonapi:{version:'1.0'}, data:{ type:'posts', attributes:{
         title:p.title, slug:p.slug, description:p.desc,
         content_html:p.html, published:false,
@@ -215,53 +222,48 @@ async function publishOne(p) {
     });
     if (r1.status !== 201) {
       const t = await r1.text();
-      throw new Error(`생성 실패 ${r1.status}: ${t.slice(0,80)}`);
+      throw new Error(`생성 실패 ${r1.status}: ${t.slice(0,120)}`);
     }
     const j1 = await r1.json();
     const pid = j1.data.id;
     addLog(`생성 완료 (ID: ${pid})`);
 
-    const r2 = await fetch(`${PROXY}/posts/${pid}/publish`, {
+    const r2 = await fetch(apiUrl(`posts/${pid}/publish`), {
       method: 'PATCH',
-      headers: { Authorization: `Bearer ${k}`, 'Content-Type': 'application/json' },
+      headers: authHeaders(k),
       body: JSON.stringify({ data:{ attributes:{ published_at: p.date }}})
     });
     if (r2.status !== 200 && r2.status !== 201) {
       const t = await r2.text();
-      throw new Error(`예약 실패 ${r2.status}: ${t.slice(0,80)}`);
+      throw new Error(`예약 실패 ${r2.status}: ${t.slice(0,120)}`);
     }
     addLog(`✅ ${p.date.slice(0,10)} 예약 완료`, 'lok');
     card.className = 'pc done';
     setIcon(p.id, 'ic-done', '✓');
-    done[p.id] = true;
-    delete failed[p.id];
+    done[p.id] = true; delete failed[p.id];
   } catch(e) {
     addLog(`오류: ${e.message}`, 'lerr');
     card.className = 'pc fail';
     setIcon(p.id, 'ic-err', '✕');
-    failed[p.id] = true;
-    delete done[p.id];
+    failed[p.id] = true; delete done[p.id];
   }
   updateStats();
 }
 
 function setIcon(id, cls, txt) {
   const el = document.getElementById(`i-${id}`);
-  el.className = `icon ${cls}`;
-  el.textContent = txt;
+  el.className = `icon ${cls}`; el.textContent = txt;
 }
 
 async function pubReady() {
   const list = POSTS.filter(p => p.ready && !done[p.id]);
-  if (!list.length) { addLog('발행할 준비된 글이 없습니다'); return; }
+  if (!list.length) { addLog('준비된 글이 없습니다'); return; }
   showProgress();
   for (let i = 0; i < list.length; i++) {
     setProgress((i / list.length) * 100);
-    await publishOne(list[i]);
-    await sleep(700);
+    await publishOne(list[i]); await sleep(700);
   }
-  setProgress(100);
-  addLog('완료', 'lok');
+  setProgress(100); addLog('완료', 'lok');
 }
 
 async function pubAll() {
@@ -269,11 +271,9 @@ async function pubAll() {
   showProgress();
   for (let i = 0; i < list.length; i++) {
     setProgress((i / list.length) * 100);
-    await publishOne(list[i]);
-    await sleep(700);
+    await publishOne(list[i]); await sleep(700);
   }
-  setProgress(100);
-  addLog('전체 처리 완료', 'lok');
+  setProgress(100); addLog('전체 완료', 'lok');
 }
 
 function showProgress() { document.getElementById('prog').style.display = 'block'; }
@@ -283,16 +283,13 @@ function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 function render() {
   const list = document.getElementById('postList');
   list.innerHTML = '';
-  const readyCount = POSTS.filter(p => p.ready).length;
-  document.getElementById('sReady').textContent = readyCount;
-
+  document.getElementById('sReady').textContent = POSTS.filter(p => p.ready).length;
   POSTS.forEach(p => {
     const d = new Date(p.date);
     const days = ['일','월','화','수','목','금','토'];
     const dateStr = `${d.getMonth()+1}/${d.getDate()} ${days[d.getDay()]}요일`;
     const card = document.createElement('div');
-    card.className = 'pc';
-    card.id = `c-${p.id}`;
+    card.className = 'pc'; card.id = `c-${p.id}`;
     card.innerHTML = `
       <div class="icon ${p.ready ? 'ic-ok' : 'ic-wait'}" id="i-${p.id}">${p.ready ? '✓' : '○'}</div>
       <div class="pi">
